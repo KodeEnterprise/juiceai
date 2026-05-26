@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>juice — your AI coding buddy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        heading: ['"Amatic SC"', 'cursive'],
+                        pixel: ['"VT323"', 'monospace'],
+                    },
+                    colors: {
+                        juice: '#FF5E00',
+                        ocean: '#00FFFF',
+                        sand: '#FFD07B',
+                        cream: '#FFF5E0',
+                        bark: '#2B1100',
+                        gold: '#FFEA00',
+                        seagreen: '#00FF66',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: 'VT323', monospace;
+            color: #2B1100;
+            overflow-x: hidden;
+            background: #FFF5E0;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Amatic SC', cursive;
+        }
+        #beach-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            object-fit: cover;
+        }
+        .pixel-btn {
+            font-family: 'VT323', monospace;
+            font-size: 1.25rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 12px 28px;
+            border: 3px solid #2B1100;
+            background: #FF5E00;
+            color: #fff;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.08s;
+            box-shadow: 4px 4px 0 #2B1100;
+            border-radius: 2px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .pixel-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 #2B1100;
+        }
+        .pixel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0 0 0 #2B1100;
+        }
+        .pixel-btn-blue {
+            background: #0088FF;
+        }
+        .pixel-btn-gold {
+            background: #FFEA00;
+            color: #2B1100;
+        }
+        .pixel-btn-ghost {
+            background: rgba(255, 245, 224, 0.95);
+            color: #2B1100;
+        }
+        .pixel-card {
+            background: #FFF5E0;
+            border: 3px solid #2B1100;
+            padding: 2rem;
+            border-radius: 2px;
+            transition: all 0.15s;
+        }
+        .pixel-card:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 6px 6px 0 #2B1100;
+        }
+        .pixel-tag {
+            display: inline-block;
+            font-size: 0.875rem;
+            padding: 4px 14px;
+            border: 2px solid #2B1100;
+            background: #FFEA00;
+            color: #2B1100;
+            border-radius: 1px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .app-frame {
+            background: #1c0a00;
+            border: 3px solid #2B1100;
+            border-radius: 2px;
+            font-family: 'VT323', monospace;
+            overflow: hidden;
+            box-shadow: 8px 8px 0 rgba(43, 17, 0, 0.2);
+        }
+        .app-titlebar {
+            background: #2B1100;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .app-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .app-body {
+            padding: 0;
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-msg {
+            padding: 12px 20px;
+            line-height: 1.4;
+            border-bottom: 1px solid #200800;
+            font-size: 1.15rem;
+        }
+        .chat-user {
+            color: #00D2FF;
+            background: rgba(0, 210, 255, 0.05);
+        }
+        .chat-ai {
+            color: #FF7700;
+            background: rgba(255, 119, 0, 0.05);
+        }
+        .chat-action {
+            color: rgba(255, 245, 224, 0.5);
+            padding: 6px 20px;
+            font-size: 1rem;
+        }
+        .chat-success {
+            color: #39FF14;
+            padding: 6px 20px;
+            font-size: 1rem;
+        }
+        .chat-input-area {
+            border-top: 2px solid #331400;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #110400;
+        }
+        .chat-input {
+            flex: 1;
+            background: #1c0a00;
+            border: 2px solid #331400;
+            color: #FFF5E0;
+            padding: 10px 14px;
+            font-family: 'VT323', monospace;
+            font-size: 1.25rem;
+            outline: none;
+            border-radius: 2px;
+        }
+        .chat-input:focus {
+            border-color: #FF5E00;
+        }
+        .chat-input::placeholder {
+            color: rgba(255, 245, 224, 0.3);
+        }
+        .send-btn {
+            background: #FF5E00;
+            border: 2px solid #FF5E00;
+            color: #fff;
+            padding: 10px 18px;
+            font-family: 'VT323', monospace;
+            font-size: 1.25rem;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.1s;
+        }
+        .send-btn:hover {
+            background: #ff7722;
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-d1 { transition-delay: 0.1s; }
+        .reveal-d2 { transition-delay: 0.2s; }
+        .reveal-d3 { transition-delay: 0.3s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+        .float-anim {
+            animation: float 3s ease-in-out infinite;
+        }
+        .nav-blur {
+            background: rgba(255, 245, 224, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 3px solid #2B1100;
+        }
+        .step-number {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Amatic SC', cursive;
+            font-size: 2.5rem;
+            font-weight: 700;
+            border: 3px solid #2B1100;
+            background: #FFEA00;
+            color: #2B1100;
+            flex-shrink: 0;
+        }
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #2B1100;
+            background: #FF5E00;
+            color: #fff;
+            border-radius: 2px;
+        }
+        .section-cream { background: #FFF5E0; }
+        .section-sand { background: #FCE1A4; }
+        .section-warm { background: #FFECC4; }
+
+        /* WORKSPACE STYLES */
+        .workspace-tabs {
+            background: #110400;
+            border-bottom: 2px solid #2B1100;
+            display: flex;
+            overflow-x: auto;
+        }
+        .workspace-tab {
+            padding: 8px 16px;
+            color: rgba(255, 245, 224, 0.4);
+            border-right: 2px solid #2B1100;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.1s;
+            white-space: nowrap;
+        }
+        .workspace-tab.active {
+            background: #1c0a00;
+            color: #FF5E00;
+            font-weight: bold;
+        }
+        .workspace-content {
+            background: #1F0D02;
+            flex-grow: 1;
+            padding: 16px;
+            color: #ffe6ce;
+            font-family: monospace;
+            font-size: 1rem;
+            overflow-y: auto;
+            height: 350px;
+            line-height: 1.5;
+        }
+        .editor-line-number {
+            color: rgba(255, 245, 224, 0.25);
+            margin-right: 12px;
+            user-select: none;
+        }
+        .preview-pane {
+            background: #FFF5E0;
+            color: #2B1100;
+            height: 100%;
+            width: 100%;
+            font-family: 'VT323', monospace;
+            padding: 12px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===================== HERO (VIBRANT BEACH BG FROM USER PIXELART) ===================== -->
+<section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <canvas id="beach-canvas"></canvas>
+    
+    <!-- Ultra-vibrant overlay content -->
+    <div class="relative z-10 text-center px-6 pt-20 pb-12">
+        <div class="mb-6 float-anim">
+            <img src="https://z-cdn-media.chatglm.cn/files/472e063a-713d-4b01-8c48-8a4164161ac5.png?auth_key=1879721766-de6c110d1f0442f2bc5ac4b3aeb71b1d-0-755ac7288b673da70e0728cf1db3a262" 
+                 alt="juice" class="w-32 h-32 md:w-40 md:h-40 mx-auto drop-shadow-lg rounded-full border-4 border-bark bg-[#FFF5E0] object-cover" 
+                 style="image-rendering:pixelated; filter: drop-shadow(4px 4px 0 rgba(0,0,0,0.4));" 
+                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🍊</text></svg> '">
+        </div>
+        <h1 class="font-heading text-7xl sm:text-8xl md:text-9xl font-bold text-white mb-2 leading-none" style="text-shadow: 5px 5px 0 #2B1100, -1px -1px 0 rgba(0,0,0,0.5);">
+            meet <span class="text-gold">juice</span>
+        </h1>
+        <p class="font-heading text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6" style="text-shadow: 3px 3px 0 #2B1100;">
+            your AI coding buddy ☀️
+        </p>
+        <p class="text-xl md:text-2xl text-white mb-10 max-w-2xl mx-auto leading-relaxed font-bold" style="text-shadow: 2px 2px 0 #2B1100;">
+            Build entire apps from a single prompt. Navigate your codebase like you wrote it yourself. Just bring your key and start creating.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="https://github.com/KodeEnterprise/Juice" target="_blank" class="pixel-btn pixel-btn-gold text-lg !px-10" style="border-color:#2B1100; box-shadow: 4px 4px 0 #2B1100;">Get Started</a>
+            <a href="#demo" class="pixel-btn pixel-btn-ghost text-lg !px-10" style="border-color:#2B1100; box-shadow: 4px 4px 0 #2B1100;">See It In Action</a>
+        </div>
+    </div>
+    
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 text-white bounce-down" style="text-shadow: 2px 2px 0 #2B1100;">
+        <i data-lucide="chevrons-down" class="w-8 h-8"></i>
+    </div>
+    <style>
+        @keyframes bounce-down {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(8px); }
+        }
+        .bounce-down {
+            animation: bounce-down 1.5s ease-in-out infinite;
+        }
+    </style>
+</section>
+
+<!-- ===================== NAV ===================== -->
+<nav id="navbar" class="sticky top-0 z-50 transition-all duration-300 nav-blur">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+        <a href="#hero" class="flex items-center gap-3">
+            <img src="https://z-cdn-media.chatglm.cn/files/472e063a-713d-4b01-8c48-8a4164161ac5.png?auth_key=1879721766-de6c110d1f0442f2bc5ac4b3aeb71b1d-0-755ac7288b673da70e0728cf1db3a262" 
+                 alt="juice" class="w-8 h-8 rounded-full border-2 border-bark bg-[#FFF5E0] object-cover" style="image-rendering:pixelated;" onerror="this.style.display='none'">
+            <span class="font-heading text-3xl font-bold text-bark">juice</span>
+        </a>
+        <div class="hidden md:flex items-center gap-8 text-lg text-bark/70 font-bold">
+            <a href="#features" class="hover:text-juice transition-colors">Features</a>
+            <a href="#teammate" class="hover:text-juice transition-colors">Your Teammate</a>
+            <a href="#demo" class="hover:text-juice transition-colors">Demo</a>
+            <a href="#everyone" class="hover:text-juice transition-colors">Who's it for</a>
+            <a href="#start" class="hover:text-juice transition-colors">Get Started</a>
+        </div>
+        <a href="https://github.com/KodeEnterprise/Juice" target="_blank" class="pixel-btn text-sm !px-5 !py-2 hidden sm:block">Try juice</a>
+        <button id="mobile-menu-btn" class="sm:hidden text-bark" aria-label="Menu">
+            <i data-lucide="menu" class="w-7 h-7"></i>
+        </button>
+    </div>
+    <div id="mobile-menu" class="hidden sm:hidden px-6 pb-4">
+        <a href="#features" class="block py-2 text-lg font-bold text-bark/70 hover:text-juice mobile-link">Features</a>
+        <a href="#teammate" class="block py-2 text-lg font-bold text-bark/70 hover:text-juice mobile-link">Your Teammate</a>
+        <a href="#demo" class="block py-2 text-lg font-bold text-bark/70 hover:text-juice mobile-link">Demo</a>
+        <a href="#everyone" class="block py-2 text-lg font-bold text-bark/70 hover:text-juice mobile-link">Who's it for</a>
+        <a href="#start" class="block py-2 text-lg font-bold text-bark/70 hover:text-juice mobile-link">Get Started</a>
+    </div>
+</nav>
+
+<!-- ===================== FEATURES ===================== -->
+<section id="features" class="section-cream py-20 md:py-28 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16 reveal">
+            <span class="pixel-tag mb-4 inline-block">What juice does</span>
+            <h2 class="font-heading text-6xl md:text-7xl font-bold mt-4 mb-3 text-bark"> 
+                less reading docs,<br>more shipping code 
+            </h2>
+            <p class="text-xl text-bark/60 max-w-xl mx-auto">
+                juice handles the heavy lifting so you can focus on the fun parts of building.
+            </p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="pixel-card reveal reveal-d1">
+                <div class="feature-icon mb-5">
+                    <i data-lucide="rocket" class="w-6 h-6"></i>
+                </div>
+                <h3 class="font-heading text-4xl font-bold mb-3">Build from scratch</h3>
+                <p class="text-lg text-bark/70 leading-relaxed font-pixel">
+                    Describe your app in plain English and watch juice scaffold the entire project — files, folders, dependencies, the lot. Full apps, not just snippets.
+                </p>
+            </div>
+            <div class="pixel-card reveal reveal-d2">
+                <div class="feature-icon mb-5" style="background:#0088FF;">
+                    <i data-lucide="folder-search" class="w-6 h-6"></i>
+                </div>
+                <h3 class="font-heading text-4xl font-bold mb-3">Knows your codebase</h3>
+                <p class="text-lg text-bark/70 leading-relaxed font-pixel">
+                    Read, write, edit, and list files like it wrote them itself. Reference anything with <strong class="text-blue-500">@</strong> and get smart autocomplete for your entire project.
+                </p>
+            </div>
+            <div class="pixel-card reveal reveal-d3">
+                <div class="feature-icon mb-5" style="background:#FFEA00; color:#2B1100;">
+                    <i data-lucide="terminal" class="w-6 h-6"></i>
+                </div>
+                <h3 class="font-heading text-4xl font-bold mb-3">Runs on its own</h3>
+                <p class="text-lg text-bark/70 leading-relaxed font-pixel">
+                    Autonomously executes commands, installs packages, and fixes errors. You supervise, juice does the work. It's like pair programming, minus the scheduling.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== AUTONOMOUS TEAMMATE SECTION ===================== -->
+<section id="teammate" class="section-warm py-20 md:py-28 px-6 border-y-4 border-bark">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16 reveal">
+            <span class="pixel-tag mb-4 inline-block">Real Codebase Access</span>
+            <h2 class="font-heading text-6xl md:text-7xl font-bold mt-4 mb-3 text-bark"> 
+                meet your 24/7 AI pair programmer 
+            </h2>
+            <p class="text-xl text-bark/60 max-w-2xl mx-auto">
+                juice doesn't just write snippets. It acts as another developer on your team, operating inside your real local directory to inspect, refine, refactor, and fix code on demand.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            <!-- LEFT COLUMN: INTERACTIVE AGENT CONTROLS -->
+            <div class="lg:col-span-5 space-y-4 reveal reveal-d1">
+                <div class="pixel-card !bg-cream border-2 cursor-pointer transition-all duration-150 active-scen" id="scen-tab-1" onclick="switchTeammateScenario(1)">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl">🐛</span>
+                        <h4 class="font-heading text-3xl font-bold text-bark">"Fix this runtime crash"</h4>
+                    </div>
+                    <p class="text-md text-bark/70">Tell juice to resolve error stack-traces by autonomously inspecting your React hooks or API routes.</p>
+                </div>
+
+                <div class="pixel-card !bg-cream border-2 cursor-pointer opacity-60 transition-all duration-150 hover:opacity-90" id="scen-tab-2" onclick="switchTeammateScenario(2)">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl">⚡</span>
+                        <h4 class="font-heading text-3xl font-bold text-bark">"Improve code structure"</h4>
+                    </div>
+                    <p class="text-md text-bark/70">Point juice at messy, legacy files. It reads, identifies bottleneck points, and refactors clean architectures.</p>
+                </div>
+
+                <div class="pixel-card !bg-cream border-2 cursor-pointer opacity-60 transition-all duration-150 hover:opacity-90" id="scen-tab-3" onclick="switchTeammateScenario(3)">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl">✨</span>
+                        <h4 class="font-heading text-3xl font-bold text-bark">"Implement this change"</h4>
+                    </div>
+                    <p class="text-md text-bark/70">Describe complete requirements in plain English. juice reads existing modules and integrates changes seamlessly.</p>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: INTERACTIVE EXECUTION SIMULATOR -->
+            <div class="lg:col-span-7 app-frame flex flex-col h-[400px]">
+                <div class="app-titlebar">
+                    <div class="app-dot" style="background:#FF5F57;"></div>
+                    <div class="app-dot" style="background:#FEBC2E;"></div>
+                    <div class="app-dot" style="background:#28C840;"></div>
+                    <span class="ml-3 text-cream/50 text-sm">🍊 juice — local_agent_exec</span>
+                </div>
+                
+                <div class="workspace-content flex-grow flex flex-col p-5 font-mono text-sm leading-relaxed" id="teammate-terminal" style="background: #160a00;">
+                    <!-- Filled dynamically with typing animations -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ===================== APP DEMO (WORKSTATION PLATFORM) ===================== -->
+<section id="demo" class="section-sand py-20 md:py-28 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-12 reveal">
+            <span class="pixel-tag mb-4 inline-block">See it in action</span>
+            <h2 class="font-heading text-6xl md:text-7xl font-bold mt-4 mb-3 text-bark"> the juice experience </h2>
+            <p class="text-xl text-bark/60">A real workspace conversation. Select steps or try writing below!</p>
+        </div>
+
+        <!-- Guided Controls -->
+        <div class="flex flex-wrap gap-3 justify-center mb-8 reveal">
+            <button onclick="triggerDemoStep(1)" class="pixel-btn text-sm !px-4 !py-2 !bg-ocean !text-bark font-bold">Step 1: Scaffold Todo App</button>
+            <button onclick="triggerDemoStep(2)" class="pixel-btn text-sm !px-4 !py-2 !bg-juice">Step 2: Add Dark Mode</button>
+            <button onclick="triggerDemoStep(3)" class="pixel-btn text-sm !px-4 !py-2 !bg-gold !text-bark font-bold">Step 3: Add Priority Flag</button>
+            <button onclick="resetDemoWorkspace()" class="pixel-btn text-sm !px-4 !py-2 !bg-red-600 text-white">Reset Workstation</button>
+        </div>
+
+        <!-- WORKSTATION WRAPPER -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch reveal reveal-d1">
+            
+            <!-- LEFT COLLUMN: CHAT WINDOW -->
+            <div class="lg:col-span-5 app-frame flex flex-col">
+                <div class="app-titlebar">
+                    <div class="app-dot" style="background:#FF5F57;"></div>
+                    <div class="app-dot" style="background:#FEBC2E;"></div>
+                    <div class="app-dot" style="background:#28C840;"></div>
+                    <span class="ml-3 text-cream/50 text-sm">🍊 juice — terminal</span>
+                    <div class="ml-auto flex items-center gap-2 text-cream/40 text-sm">
+                        <span style="color:#00FF66;">● online</span>
+                    </div>
+                </div>
+                <div class="app-body overflow-y-auto max-h-[400px]" id="app-chat" style="flex-grow: 1;">
+                    <!-- Demo chat fills up here -->
+                </div>
+                <div class="chat-input-area" style="position:relative;">
+                    <div class="autocomplete-popup" id="autocomplete">
+                        <div class="autocomplete-item" onclick="insertAutocomplete('@App.jsx')"><span class="highlight">@</span> App.jsx</div>
+                        <div class="autocomplete-item" onclick="insertAutocomplete('@TodoList.jsx')"><span class="highlight">@</span> TodoList.jsx</div>
+                        <div class="autocomplete-item" onclick="insertAutocomplete('@styles.css')"><span class="highlight">@</span> styles.css</div>
+                    </div>
+                    <input type="text" class="chat-input" id="demo-input" placeholder="Type @ to reference files..." onkeydown="handleInputKeyPress(event)">
+                    <button onclick="handleSendBtn()" class="send-btn">Send</button>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: CODE EDITOR & PREVIEW -->
+            <div class="lg:col-span-7 app-frame flex flex-col">
+                <div class="app-titlebar">
+                    <div class="app-dot" style="background:#b8a383;"></div>
+                    <span class="ml-1 text-cream/50 text-sm">📁 juice — workspace / sandbox</span>
+                    <div class="ml-auto flex items-center gap-3">
+                        <span class="text-gold text-xs font-bold">interactive coding pane</span>
+                    </div>
+                </div>
+                
+                <!-- Workspace Tabs -->
+                <div class="workspace-tabs" id="editor-tabs">
+                    <div class="workspace-tab active" id="tab-app" onclick="switchEditorTab('app')">App.jsx</div>
+                    <div class="workspace-tab" id="tab-list" onclick="switchEditorTab('list')">TodoList.jsx</div>
+                    <div class="workspace-tab" id="tab-style" onclick="switchEditorTab('style')">styles.css</div>
+                    <div class="workspace-tab" id="tab-preview" onclick="switchEditorTab('preview')" style="background: #00FF66; color: #2B1100; font-weight: bold;">Preview 👁️</div>
+                </div>
+
+                <!-- Workspace Code Screen -->
+                <div class="workspace-content" id="editor-body">
+                    <!-- Dynamic code output -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ===================== FOR EVERYONE ===================== -->
+<section id="everyone" class="section-warm py-20 md:py-28 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16 reveal">
+            <span class="pixel-tag mb-4 inline-block">For everyone</span>
+            <h2 class="font-heading text-6xl md:text-7xl font-bold mt-4 mb-3 text-bark"> coders & creators welcome </h2>
+            <p class="text-xl text-bark/60 max-w-xl mx-auto">
+                Whether you ship microservices or you're just vibing with ideas — juice meets you where you are.
+            </p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8">
+            <div class="pixel-card reveal reveal-d1" style="border-color:#0088FF;">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="feature-icon" style="background:#0088FF;">
+                        <i data-lucide="code-2" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-heading text-4xl font-bold text-bark">For the engineers</h3>
+                </div>
+                <ul class="space-y-3 text-lg text-bark/70 font-pixel">
+                    <li class="flex gap-3 items-start"><span class="text-blue-500 mt-1">▸</span> Full codebase access — read, write, edit any file</li>
+                    <li class="flex gap-3 items-start"><span class="text-blue-500 mt-1">▸</span> Autonomous command execution in your project dir</li>
+                    <li class="flex gap-3 items-start"><span class="text-blue-500 mt-1">▸</span> <span class="font-bold text-bark">@</span> file references with project-aware autocomplete</li>
+                    <li class="flex gap-3 items-start"><span class="text-blue-500 mt-1">▸</span> <span class="font-bold text-bark">#</span> pull in any website documentation instantly</li>
+                    <li class="flex gap-3 items-start"><span class="text-blue-500 mt-1">▸</span> Save sessions & resume exactly where you left off</li>
+                </ul>
+            </div>
+            <div class="pixel-card reveal reveal-d2" style="border-color:#FF5E00;">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="feature-icon" style="background:#FF5E00;">
+                        <i data-lucide="sparkles" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-heading text-4xl font-bold text-bark">For the vibe coders</h3>
+                </div>
+                <ul class="space-y-3 text-lg text-bark/70 font-pixel">
+                    <li class="flex gap-3 items-start"><span class="text-juice mt-1">▸</span> Just describe what you want in plain English</li>
+                    <li class="flex gap-3 items-start"><span class="text-juice mt-1">▸</span> Friendly, intuitive UI — no terminal anxiety</li>
+                    <li class="flex gap-3 items-start"><span class="text-juice mt-1">▸</span> Zero config — paste a key and you're in</li>
+                    <li class="flex gap-3 items-start"><span class="text-juice mt-1">▸</span> Builds complete apps, not just code fragments</li>
+                    <li class="flex gap-3 items-start"><span class="text-juice mt-1">▸</span> Explains what it's doing every step of the way</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== GET STARTED ===================== -->
+<section id="start" class="section-cream py-20 md:py-28 px-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-16 reveal">
+            <span class="pixel-tag mb-4 inline-block">Setup</span>
+            <h2 class="font-heading text-6xl md:text-7xl font-bold mt-4 mb-3 text-bark"> ready in 30 seconds </h2>
+            <p class="text-xl text-bark/60">Three steps. No really, that's it.</p>
+        </div>
+        <div class="space-y-8">
+            <div class="pixel-card flex flex-col sm:flex-row items-start gap-6 reveal reveal-d1">
+                <div class="step-number">1</div>
+                <div>
+                    <h3 class="font-heading text-3xl font-bold mb-1">Paste your OpenRouter key</h3>
+                    <p class="text-lg text-bark/70">
+                        Grab an API key from <a href="https://openrouter.ai" target="_blank" class="underline text-juice hover:text-bark">openrouter.ai</a> and drop it in. That's your only credential — we keep nothing else.
+                    </p>
+                </div>
+            </div>
+            <div class="pixel-card flex flex-col sm:flex-row items-start gap-6 reveal reveal-d2">
+                <div class="step-number">2</div>
+                <div>
+                    <h3 class="font-heading text-3xl font-bold mb-1">Pick your model + directory</h3>
+                    <p class="text-lg text-bark/70">
+                        Enter the model name you want to use (Gemini 3.1 Pro, Claude 3.6 Sonnet, GLM 5.1 — whatever OpenRouter supports) and point juice at the folder you want to work in.
+                    </p>
+                </div>
+            </div>
+            <div class="pixel-card flex flex-col sm:flex-row items-start gap-6 reveal reveal-d3">
+                <div class="step-number">3</div>
+                <div>
+                    <h3 class="font-heading text-3xl font-bold mb-1">Start building 🚀</h3>
+                    <p class="text-lg text-bark/70">
+                        That's it. Tell juice what to build, reference files with <span class="font-bold">@</span>, pull in websites with <span class="font-bold">#</span>, and watch it go.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== SMART DETAILS ===================== -->
+<section class="section-sand py-20 md:py-28 px-6">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16 reveal">
+            <span class="pixel-tag mb-4 inline-block">The details</span>
+            <h2 class="font-heading text-6xl md:text-7xl font-bold mt-4 mb-3 text-bark"> the little things matter </h2>
+            <p class="text-xl text-bark/60">Thoughtful features that make your workflow actually flow.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="pixel-card reveal reveal-d1 text-center">
+                <div class="text-4xl mb-3 font-heading font-bold text-juice">@</div>
+                <h4 class="font-heading text-3xl font-bold mb-2">File references</h4>
+                <p class="text-bark/70">Type @ to reference any file in your project with smart autocomplete suggestions.</p>
+            </div>
+            <div class="pixel-card reveal reveal-d2 text-center">
+                <div class="text-4xl mb-3 font-heading font-bold text-blue-500">#</div>
+                <h4 class="font-heading text-3xl font-bold mb-2">Web references</h4>
+                <p class="text-bark/70">Use # to pull in any website for context. Docs, tutorials, APIs — juice reads them all.</p>
+            </div>
+            <div class="pixel-card reveal reveal-d3 text-center">
+                <div class="text-3xl mb-3">💾</div>
+                <h4 class="font-heading text-3xl font-bold mb-2">Save & resume</h4>
+                <p class="text-bark/70">Save chat sessions and pick up exactly where you left off. No context lost.</p>
+            </div>
+            <div class="pixel-card reveal reveal-d1 text-center">
+                <div class="text-3xl mb-3">🧠</div>
+                <h4 class="font-heading text-3xl font-bold mb-2">Project awareness</h4>
+                <p class="text-bark/70">juice understands your project structure and writes code that fits in seamlessly.</p>
+            </div>
+            <div class="pixel-card reveal reveal-d2 text-center">
+                <div class="text-3xl mb-3">⚡</div>
+                <h4 class="font-heading text-3xl font-bold mb-2">Autonomous execution</h4>
+                <p class="text-bark/70">Runs commands, installs deps, fixes bugs — all without hand-holding.</p>
+            </div>
+            <div class="pixel-card reveal reveal-d3 text-center">
+                <div class="text-3xl mb-3">🎯</div>
+                <h4 class="font-heading text-3xl font-bold mb-2">Any model you want</h4>
+                <p class="text-bark/70">Via OpenRouter, use Gemini 3.1 Pro, Claude 3.6 Sonnet, GLM 5.1 — your call, your budget.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== CTA ===================== -->
+<section class="section-cream py-24 md:py-32 px-6">
+    <div class="max-w-3xl mx-auto text-center reveal">
+        <img src="https://z-cdn-media.chatglm.cn/files/472e063a-713d-4b01-8c48-8a4164161ac5.png?auth_key=1879721766-de6c110d1f0442f2bc5ac4b3aeb71b1d-0-755ac7288b673da70e0728cf1db3a262" 
+             alt="juice" class="w-24 h-24 mx-auto mb-6 float-anim rounded-full border-4 border-bark bg-[#FFF5E0] object-cover" style="image-rendering:pixelated;" 
+             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🍊</text></svg>'">
+        <h2 class="font-heading text-6xl md:text-8xl font-bold mb-4 text-bark"> ready to <span class="text-juice">juice</span> up? </h2>
+        <p class="text-xl md:text-2xl text-bark/60 mb-10 max-w-xl mx-auto">
+            Your next project is one prompt away. Bring your key, pick a folder, and let's build something awesome.
+        </p>
+        <a href="https://github.com/KodeEnterprise/Juice" target="_blank" class="pixel-btn pixel-btn-gold text-xl !px-14 !py-4">Get Started Now</a>
+    </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="py-12 px-6" style="background:#2B1100;">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+            <img src="https://z-cdn-media.chatglm.cn/files/472e063a-713d-4b01-8c48-8a4164161ac5.png?auth_key=1879721766-de6c110d1f0442f2bc5ac4b3aeb71b1d-0-755ac7288b673da70e0728cf1db3a262" 
+                 alt="juice" class="w-8 h-8 rounded-full border-2 border-[#FFF5E0] bg-[#FFF5E0] object-cover" style="image-rendering:pixelated;" onerror="this.style.display='none'">
+            <span class="font-heading text-2xl font-bold text-cream">juice</span>
+            <span class="text-cream/40">— your AI coding buddy</span>
+        </div>
+        <p class="text-cream/40 text-lg">made with 🍊 by the juice team</p>
+    </div>
+</footer>
+
+<script>
+    // =========== HIGH-QUALITY CHUNKY PIXEL BEACH CANVAS (Based on Pixelart.jpeg) ===========
+    const canvas = document.getElementById('beach-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Exact low-resolution layout aspect ratio for retro blocky crispness
+    const W = 320, H = 180;
+    canvas.width = W;
+    canvas.height = H;
+    let time = 0;
+
+    // Drifting cloud coordinates
+    let cloudOffset1 = 0;
+    let cloudOffset2 = 80;
+    let cloudOffset3 = 200;
+
+    function pxRect(c, x, y, w, h, col) {
+        c.fillStyle = col;
+        c.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+    }
+
+    function pxCircle(c, cx, cy, r, col) {
+        c.fillStyle = col;
+        for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+                if (dx*dx + dy*dy <= r*r) {
+                    c.fillRect(Math.floor(cx + dx), Math.floor(cy + dy), 1, 1);
+                }
+            }
+        }
+    }
+
+    // Dynamic, beautiful procedurally-built pixel clouds inspired by the image
+    function drawVibrantCloud(c, cx, cy, scale) {
+        // Shadow/depth cloud structures (Light cyan-blue)
+        pxCircle(c, cx, cy, 14 * scale, '#C6F1FF');
+        pxCircle(c, cx - 18 * scale, cy + 4 * scale, 10 * scale, '#C6F1FF');
+        pxCircle(c, cx + 18 * scale, cy + 2 * scale, 11 * scale, '#C6F1FF');
+        pxCircle(c, cx + 32 * scale, cy + 6 * scale, 8 * scale, '#C6F1FF');
+        pxCircle(c, cx - 30 * scale, cy + 8 * scale, 7 * scale, '#C6F1FF');
+
+        // Pure white fluffy front parts
+        pxCircle(c, cx, cy - 3, 12 * scale, '#FFFFFF');
+        pxCircle(c, cx - 16 * scale, cy + 1, 9 * scale, '#FFFFFF');
+        pxCircle(c, cx + 16 * scale, cy - 1, 10 * scale, '#FFFFFF');
+        pxCircle(c, cx + 28 * scale, cy + 3 * scale, 7 * scale, '#FFFFFF');
+        pxCircle(c, cx - 26 * scale, cy + 5 * scale, 6 * scale, '#FFFFFF');
+    }
+
+    // High quality pixel art vegetation (Bush)
+    function drawVibrantBush(c, bx, by, scale, windSway) {
+        // Base Shadow Green
+        pxCircle(c, bx, by, 16 * scale, '#17502B');
+        pxCircle(c, bx - 14 * scale, by + 4 * scale, 12 * scale, '#17502B');
+        pxCircle(c, bx + 14 * scale, by + 2 * scale, 13 * scale, '#17502B');
+        pxCircle(c, bx + 28 * scale, by + 6 * scale, 10 * scale, '#17502B');
+
+        // Mid Green
+        pxCircle(c, bx, by - 2, 13 * scale, '#2D8249');
+        pxCircle(c, bx - 13 * scale, by + 3 * scale, 10 * scale, '#2D8249');
+        pxCircle(c, bx + 13 * scale, by + 1 * scale, 11 * scale, '#2D8249');
+        pxCircle(c, bx + 24 * scale, by + 4 * scale, 8 * scale, '#2D8249');
+
+        // Highlight Green-Yellow
+        pxCircle(c, bx - 3 + windSway, by - 6, 9 * scale, '#86E372');
+        pxCircle(c, bx - 14 + windSway, by - 1, 7 * scale, '#86E372');
+        pxCircle(c, bx + 10 + windSway, by - 4, 8 * scale, '#86E372');
+        pxCircle(c, bx + 21 + windSway, by + 1, 6 * scale, '#86E372');
+    }
+
+    // Grass blades (Swaying)
+    function drawSwayingReed(c, rx, ry, h, angle, col) {
+        c.strokeStyle = col;
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(rx, ry);
+        // Quadratic curve to simulate natural bending
+        const ctrlX = rx + Math.sin(angle) * (h * 0.4);
+        const ctrlY = ry - h * 0.5;
+        const endX = rx + Math.sin(angle) * (h * 0.9);
+        const endY = ry - h;
+        c.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+        c.stroke();
+    }
+
+    // Wooden deck/boardwalk in the lower center
+    function drawBoardwalk(c, bx, by, w, h) {
+        // Shadow base
+        pxRect(c, bx - 2, by - 1, w + 4, h + 3, '#1E140F');
+        // Wooden planks
+        pxRect(c, bx, by, w, h, '#96806C'); // Top wood face
+        
+        // Horizontal plank separators
+        pxRect(c, bx, by + Math.floor(h * 0.35), w, 1, '#665141');
+        pxRect(c, bx, by + Math.floor(h * 0.7), w, 1, '#665141');
+
+        // Highlights for planks
+        pxRect(c, bx + 1, by + 1, w - 2, 1, '#BC9F88');
+        pxRect(c, bx + 1, by + Math.floor(h * 0.35) + 1, w - 2, 1, '#BC9F88');
+        pxRect(c, bx + 1, by + Math.floor(h * 0.7) + 1, w - 2, 1, '#BC9F88');
+
+        // Nails & grain detail
+        c.fillStyle = '#4A3B2F';
+        c.fillRect(bx + 4, by + 2, 1, 1);
+        c.fillRect(bx + w - 5, by + 2, 1, 1);
+        c.fillRect(bx + 8, by + Math.floor(h * 0.35) + 2, 1, 1);
+        c.fillRect(bx + w - 9, by + Math.floor(h * 0.35) + 2, 1, 1);
+        c.fillRect(bx + 5, by + Math.floor(h * 0.7) + 2, 1, 1);
+        c.fillRect(bx + w - 6, by + Math.floor(h * 0.7) + 2, 1, 1);
+    }
+
+    const gulls = [
+        { x: 90, y: 40, speed: 0.2, scale: 1 },
+        { x: 120, y: 34, speed: 0.15, scale: 0.8 }
+    ];
+
+    function renderBeachScene() {
+        time += 0.02;
+
+        // ---- 1. SKY (Horizontal bands of deep sky blue & cyan) ----
+        pxRect(ctx, 0, 0, W, 25, '#35A3EB');
+        pxRect(ctx, 0, 25, W, 18, '#59BCF5');
+        pxRect(ctx, 0, 43, W, 12, '#81D5FD');
+        pxRect(ctx, 0, 55, W, 5, '#ACE6FE');
+
+        // ---- 2. DRIFTING RETRO CLOUDS ----
+        cloudOffset1 = (cloudOffset1 + 0.04) % (W + 100);
+        cloudOffset2 = (cloudOffset2 + 0.02) % (W + 100);
+        cloudOffset3 = (cloudOffset3 + 0.03) % (W + 100);
+
+        drawVibrantCloud(ctx, cloudOffset1 - 50, 28, 1.2);
+        drawVibrantCloud(ctx, cloudOffset2 - 50, 36, 0.9);
+        drawVibrantCloud(ctx, cloudOffset3 - 50, 18, 0.7);
+
+        // ---- 3. SEA LAYER (Depth gradient with shimmers) ----
+        // Deep Sea Horizon
+        pxRect(ctx, 0, 60, W, 8, '#0E78B7');
+        // Mid Sea
+        pxRect(ctx, 0, 68, W, 10, '#0097DA');
+        // Shallow Sea
+        pxRect(ctx, 0, 78, W, 14, '#1CC1E8');
+        // Coastal Glistening water
+        pxRect(ctx, 0, 92, W, 8, '#58DEF6');
+
+        // Waves & foam lines (Scrolling rhythmically)
+        for (let row = 64; row < 100; row += 6) {
+            const waveSpeed = 1.4 + (row * 0.015);
+            const waveFrequency = 0.04;
+            const horizontalScroll = time * waveSpeed;
+
+            for (let x = 0; x < W; x += 4) {
+                const waveHeightSin = Math.sin(x * waveFrequency + horizontalScroll + row) * 1.5;
+                if (waveHeightSin > 0.8) {
+                    // Render bright cyan waves
+                    ctx.fillStyle = '#C8FAFF';
+                    ctx.fillRect(x, row + Math.floor(waveHeightSin * 0.5), 3, 1);
+                }
+                // Random extra glistens
+                if (Math.sin(x * 0.1 + time * 3 + row) > 0.93 && row > 70) {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(x, row + 1, 2, 1);
+                }
+            }
+        }
+
+        // ---- 4. GOLDEN SAND BEACH (Y: 100 to H) ----
+        // Light cream sand face
+        pxRect(ctx, 0, 100, W, H - 100, '#FFEFD3');
+        // Sand shaded/textured areas
+        for (let x = 0; x < W; x++) {
+            // Curving shoreline structure
+            const shoreCurve = 100 + Math.sin(x * 0.025 + time * 0.5) * 1.5;
+            ctx.fillStyle = '#FFEFD3';
+            ctx.fillRect(x, Math.floor(shoreCurve), 1, H);
+
+            // Shaded wave foam line washing up
+            ctx.fillStyle = '#FFFFFF';
+            if (Math.sin(x * 0.1 + time * 1.5) > 0.1) {
+                ctx.fillRect(x, Math.floor(shoreCurve) - 1, 1, 1);
+            }
+        }
+
+        // Beach grass details
+        ctx.fillStyle = '#ECAE7E'; // Shadow speckles on sand
+        for (let i = 0; i < 40; i++) {
+            const rx = (i * 17) % W;
+            const ry = 102 + ((i * 13) % (H - 102));
+            ctx.fillRect(rx, ry, 1, 1);
+        }
+
+        // ---- 5. BOARDWALK (Central wooden deck platform) ----
+        // Adjusted to be a bit bigger (w: 170, h: 28) and higher up on the sand (by: 115)
+        drawBoardwalk(ctx, 75, 115, 170, 28);
+
+        // ---- 6. SWAYING VEGETATION & BUSHES ----
+        const windSway = Math.sin(time * 1.5) * 1.8;
+        const windAngle = Math.sin(time * 1.5) * 0.18;
+
+        // Big green pixel art bush on the right side
+        drawVibrantBush(ctx, 260, 115, 1.25, windSway);
+
+        // Swaying reeds on the Left side
+        for (let i = 0; i < 6; i++) {
+            const rx = 10 + (i * 5);
+            const ry = 135 - (i % 2) * 2;
+            const rHeight = 15 + (i * 3) + Math.sin(i * 12) * 4;
+            drawSwayingReed(ctx, rx, ry, rHeight, windAngle + 0.1, '#2D8249');
+            drawSwayingReed(ctx, rx, ry, rHeight - 3, windAngle + 0.1, '#86E372');
+        }
+
+        // Swaying reeds on the Right side (around the bush)
+        for (let i = 0; i < 4; i++) {
+            const rx = 210 + (i * 8);
+            const ry = 125 + (i % 2) * 2;
+            const rHeight = 18 + (i * 4);
+            drawSwayingReed(ctx, rx, ry, rHeight, windAngle - 0.1, '#2D8249');
+            drawSwayingReed(ctx, rx, ry, rHeight - 4, windAngle - 0.05, '#86E372');
+        }
+
+        // Small grass tufts on sand
+        for (let i = 0; i < 6; i++) {
+            const gx = 50 + (i * 35);
+            const gy = 110 + (i * 5) % 15;
+            drawSwayingReed(ctx, gx, gy, 5, windAngle, '#2D8249');
+            drawSwayingReed(ctx, gx + 2, gy, 4, windAngle + 0.05, '#86E372');
+        }
+
+        // ---- 7. ANIMATED FLYING GULLS ----
+        gulls.forEach(g => {
+            g.x += g.speed;
+            if (g.x > W + 20) g.x = -20;
+            const wingPhase = Math.sin(time * 3 + g.x * 0.1) > 0 ? 1 : 0;
+            const gx = Math.floor(g.x);
+            const gy = Math.floor(g.y + Math.sin(time * 1.5 + g.x * 0.05) * 1.2);
+
+            ctx.fillStyle = '#1D3D54'; // Dark contrast birds
+            if (wingPhase === 1) {
+                // Wings up V
+                ctx.fillRect(gx - 2, gy - 1, 1, 1);
+                ctx.fillRect(gx - 1, gy, 1, 1);
+                ctx.fillRect(gx, gy + 1, 1, 1);
+                ctx.fillRect(gx + 1, gy, 1, 1);
+                ctx.fillRect(gx + 2, gy - 1, 1, 1);
+            } else {
+                // Wings down V
+                ctx.fillRect(gx - 2, gy, 1, 1);
+                ctx.fillRect(gx - 1, gy - 1, 1, 1);
+                ctx.fillRect(gx, gy, 1, 1);
+                ctx.fillRect(gx + 1, gy - 1, 1, 1);
+                ctx.fillRect(gx + 2, gy, 1, 1);
+            }
+        });
+
+        requestAnimationFrame(renderBeachScene);
+    }
+    renderBeachScene();
+
+
+    // =========== NEW INTERACTIVE AUTONOMOUS TEAMMATE SIMULATOR ===========
+    const scenarioData = {
+        1: [
+            { type: 'input', text: 'juice find out why my backend API crashes when fetching user metrics' },
+            { type: 'exec', text: '🍊 Codebase scan initiated...' },
+            { type: 'exec', text: '🔍 Inspecting src/api/metrics.js & src/db/connection.js' },
+            { type: 'exec', text: '⚠️ Bug found: dbPool query undefined inside catch block' },
+            { type: 'exec', text: '🔨 Re-writing metrics handler to properly release connections' },
+            { type: 'success', text: '✅ Fix Applied! Connection leaks resolved. API returns 200 OK.' }
+        ],
+        2: [
+            { type: 'input', text: 'juice help me refactor this messy legacy user profile page' },
+            { type: 'exec', text: '🍊 Multi-file analysis starting...' },
+            { type: 'exec', text: '📂 Analyzing src/pages/Profile.jsx (430 lines of spaghetti)' },
+            { type: 'exec', text: '⚡ Breaking down messy useEffects into custom useAuthMetrics hook' },
+            { type: 'exec', text: '📝 Extracted 4 dumb components out of Profile.jsx' },
+            { type: 'success', text: '✅ Profile.jsx cleaned up! File size reduced by 60%. Performance boosted!' }
+        ],
+        3: [
+            { type: 'input', text: 'juice we need a Google OAuth login flow in our landing page' },
+            { type: 'exec', text: '🍊 Setting up secure feature integration...' },
+            { type: 'exec', text: '📝 Writing src/components/GoogleAuthButton.jsx' },
+            { type: 'exec', text: '📦 Running npm install react-oauth/google --save' },
+            { type: 'exec', text: '📝 Injecting ClientProvider inside src/main.jsx' },
+            { type: 'success', text: '✅ Google Auth implemented! Check local workspace files to review the code.' }
+        ]
+    };
+
+    function switchTeammateScenario(id) {
+        // Toggle selected tab design
+        for (let i = 1; i <= 3; i++) {
+            const el = document.getElementById(`scen-tab-${i}`);
+            if (i === id) {
+                el.classList.add('border-juice', '!bg-white', 'scale-[1.02]');
+                el.classList.remove('opacity-60');
+            } else {
+                el.classList.remove('border-juice', '!bg-white', 'scale-[1.02]');
+                el.classList.add('opacity-60');
+            }
+        }
+
+        // Run scenario output animation
+        runScenarioTerminal(id);
+    }
+
+    function runScenarioTerminal(id) {
+        const term = document.getElementById('teammate-terminal');
+        term.innerHTML = '';
+        const steps = scenarioData[id];
+        let idx = 0;
+
+        function animateTermLine() {
+            if (idx >= steps.length) return;
+            const s = steps[idx];
+            const div = document.createElement('div');
+            
+            if (s.type === 'input') {
+                div.className = 'text-[#00FFFF] mb-3';
+                div.innerHTML = `<strong>dev_prompt$</strong> ${s.text}`;
+            } else if (s.type === 'exec') {
+                div.className = 'text-orange-200/50 pl-3 mb-1';
+                div.innerHTML = `&gt; ${s.text}`;
+            } else if (s.type === 'success') {
+                div.className = 'text-[#00FF66] pl-3 mt-2';
+                div.innerHTML = `<strong>${s.text}</strong>`;
+            }
+            
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
+            idx++;
+            setTimeout(animateTermLine, s.type === 'input' ? 800 : 400);
+        }
+        
+        animateTermLine();
+    }
+
+    // Run first teammate scenario by default on start
+    setTimeout(() => {
+        switchTeammateScenario(1);
+    }, 1000);
+
+
+    // =========== MOBILE MENU ===========
+    document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+    document.querySelectorAll('.mobile-link').forEach(a => {
+        a.addEventListener('click', () => document.getElementById('mobile-menu').classList.add('hidden'));
+    });
+
+    // =========== SCROLL REVEAL ===========
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) entry.target.classList.add('visible');
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+
+    // =========== MULTI-FILE WORKSPACE CODESETS ===========
+    const workspaceFiles = {
+        app: {
+            step1: `// src/App.jsx
+import React, { useState } from 'react';
+import TodoList from './components/TodoList';
+import './styles.css';
+
+export default function App() {
+  const [todos, setTodos] = useState([
+    { id: 1, text: "Build next-gen AI buddy 🍊", done: false },
+    { id: 2, text: "Sip some beachside coconut juice 🥥", done: true }
+  ]);
+
+  return (
+    <div className="todo-container">
+      <header>
+        <h1>🍊 juice todo app</h1>
+      </header>
+      <TodoList todos={todos} setTodos={setTodos} />
+    </div>
+  );
+}`,
+            step2: `// src/App.jsx (ADDED DARK MODE STATE)
+import React, { useState } from 'react';
+import TodoList from './components/TodoList';
+import './styles.css';
+
+export default function App() {
+  const [darkMode, setDarkMode] = useState(false);
+  const [todos, setTodos] = useState([
+    { id: 1, text: "Build next-gen AI buddy 🍊", done: false },
+    { id: 2, text: "Sip some beachside coconut juice 🥥", done: true }
+  ]);
+
+  return (
+    <div className={\`todo-container \${darkMode ? 'dark' : ''}\`}>
+      <header>
+        <h1>🍊 juice todo app</h1>
+        <button 
+          className="toggle-btn" 
+          onClick={() => setDarkMode(!darkMode)}
+        >
+          {darkMode ? '☀️ Light' : '🌙 Dark'} Mode
+        </button>
+      </header>
+      <TodoList todos={todos} setTodos={setTodos} />
+    </div>
+  );
+}`,
+            step3: `// src/App.jsx (FULL STACK COMPLETED)
+import React, { useState } from 'react';
+import TodoList from './components/TodoList';
+import './styles.css';
+
+export default function App() {
+  const [darkMode, setDarkMode] = useState(false);
+  const [todos, setTodos] = useState([
+    { id: 1, text: "Build next-gen AI buddy 🍊", done: false, priority: true },
+    { id: 2, text: "Sip some beachside coconut juice 🥥", done: true, priority: false }
+  ]);
+
+  return (
+    <div className={\`todo-container \${darkMode ? 'dark' : ''}\`}>
+      <header>
+        <h1>🍊 juice todo app</h1>
+        <button 
+          className="toggle-btn" 
+          onClick={() => setDarkMode(!darkMode)}
+        >
+          {darkMode ? '☀️ Light' : '🌙 Dark'} Mode
+        </button>
+      </header>
+      <TodoList todos={todos} setTodos={setTodos} />
+    </div>
+  );
+}`
+        },
+        list: {
+            step1: `// src/components/TodoList.jsx
+import React, { useState } from 'react';
+
+export default function TodoList({ todos, setTodos }) {
+  const [newTodo, setNewTodo] = useState("");
+
+  const addTodo = () => {
+    if (!newTodo.trim()) return;
+    setTodos([...todos, { id: Date.now(), text: newTodo, done: false }]);
+    setNewTodo("");
+  };
+
+  return (
+    <div className="list-wrap">
+      <div className="input-row">
+        <input 
+          value={newTodo} 
+          onChange={(e) => setNewTodo(e.target.value)} 
+          placeholder="New task..."
+        />
+        <button onClick={addTodo}>Add</button>
+      </div>
+      <ul>
+        {todos.map(t => (
+          <li key={t.id} className={t.done ? 'done' : ''}>
+            <span onClick={() => {
+              setTodos(todos.map(x => x.id === t.id ? {...x, done: !x.done} : x))
+            }}>{t.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}`,
+            step2: `// src/components/TodoList.jsx
+import React, { useState } from 'react';
+
+export default function TodoList({ todos, setTodos }) {
+  const [newTodo, setNewTodo] = useState("");
+
+  const addTodo = () => {
+    if (!newTodo.trim()) return;
+    setTodos([...todos, { id: Date.now(), text: newTodo, done: false }]);
+    setNewTodo("");
+  };
+
+  return (
+    <div className="list-wrap">
+      <div className="input-row">
+        <input 
+          value={newTodo} 
+          onChange={(e) => setNewTodo(e.target.value)} 
+          placeholder="New task..."
+        />
+        <button onClick={addTodo}>Add</button>
+      </div>
+      <ul>
+        {todos.map(t => (
+          <li key={t.id} className={t.done ? 'done' : ''}>
+            <span onClick={() => {
+              setTodos(todos.map(x => x.id === t.id ? {...x, done: !x.done} : x))
+            }}>{t.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}`,
+            step3: `// src/components/TodoList.jsx (ADDED PRIORITY TAGS)
+import React, { useState } from 'react';
+
+export default function TodoList({ todos, setTodos }) {
+  const [newTodo, setNewTodo] = useState("");
+  const [isPriority, setIsPriority] = useState(false);
+
+  const addTodo = () => {
+    if (!newTodo.trim()) return;
+    setTodos([...todos, { id: Date.now(), text: newTodo, done: false, priority: isPriority }]);
+    setNewTodo("");
+    setIsPriority(false);
+  };
+
+  const togglePriority = (id) => {
+    setTodos(todos.map(x => x.id === id ? {...x, priority: !x.priority} : x));
+  };
+
+  return (
+    <div className="list-wrap">
+      <div className="input-row">
+        <input 
+          value={newTodo} 
+          onChange={(e) => setNewTodo(e.target.value)} 
+          placeholder="New task..."
+        />
+        <label className="priority-checkbox">
+          <input 
+            type="checkbox" 
+            checked={isPriority} 
+            onChange={(e) => setIsPriority(e.target.checked)}
+          /> 🔥 Priority
+        </label>
+        <button onClick={addTodo}>Add</button>
+      </div>
+      <ul>
+        {todos.map(t => (
+          <li key={t.id} className={\`\${t.done ? 'done' : ''} \${t.priority ? 'priority' : ''}\`}>
+            <span onClick={() => {
+              setTodos(todos.map(x => x.id === t.id ? {...x, done: !x.done} : x))
+            }}>{t.text}</span>
+            <button 
+              className="priority-badge" 
+              onClick={() => togglePriority(t.id)}
+            >
+              {t.priority ? '🔥 High' : '⚡ Normal'}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}`
+        },
+        style: {
+            step1: `/* styles.css */
+body {
+  font-family: 'VT323', monospace;
+  background: #FFF5E0;
+}
+.todo-container {
+  max-width: 400px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 3px solid #2B1100;
+  box-shadow: 4px 4px 0 #2B1100;
+  background: white;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #2B1100;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+input {
+  flex: 1;
+  padding: 6px;
+  border: 2px solid #2B1100;
+  font-family: inherit;
+}
+button {
+  background: #FF5E00;
+  color: white;
+  border: 2px solid #2B1100;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 2px 2px 0 #2B1100;
+}
+button:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #2B1100;
+}
+li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.done {
+  text-decoration: line-through;
+  color: #888;
+}`,
+            step2: `/* styles.css (INCLUDES DARK MODE SUPPORT) */
+body {
+  font-family: 'VT323', monospace;
+  background: #FFF5E0;
+}
+.todo-container {
+  max-width: 400px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 3px solid #2B1100;
+  box-shadow: 4px 4px 0 #2B1100;
+  background: white;
+  transition: all 0.2s;
+}
+.todo-container.dark {
+  background: #2B1100;
+  color: #FFF5E0;
+  border-color: #FFEA00;
+  box-shadow: 4px 4px 0 #FFEA00;
+}
+.todo-container.dark input {
+  background: #110400;
+  color: white;
+  border-color: #FFEA00;
+}
+.todo-container.dark button {
+  background: #FFEA00;
+  color: #2B1100;
+  border-color: #FFEA00;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #2B1100;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+.todo-container.dark header {
+  border-bottom-color: #FFEA00;
+}
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+input {
+  flex: 1;
+  padding: 6px;
+  border: 2px solid #2B1100;
+  font-family: inherit;
+}
+button {
+  background: #FF5E00;
+  color: white;
+  border: 2px solid #2B1100;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 2px 2px 0 #2B1100;
+}
+button:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #2B1100;
+}
+li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.done {
+  text-decoration: line-through;
+  color: #888;
+}`,
+            step3: `/* styles.css (COMPLETED WITH PRIORITY INDICATORS) */
+body {
+  font-family: 'VT323', monospace;
+  background: #FFF5E0;
+}
+.todo-container {
+  max-width: 400px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 3px solid #2B1100;
+  box-shadow: 4px 4px 0 #2B1100;
+  background: white;
+  transition: all 0.2s;
+}
+.todo-container.dark {
+  background: #2B1100;
+  color: #FFF5E0;
+  border-color: #FFEA00;
+  box-shadow: 4px 4px 0 #FFEA00;
+}
+.todo-container.dark input {
+  background: #110400;
+  color: white;
+  border-color: #FFEA00;
+}
+.todo-container.dark button {
+  background: #FFEA00;
+  color: #2B1100;
+  border-color: #FFEA00;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #2B1100;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+.todo-container.dark header {
+  border-bottom-color: #FFEA00;
+}
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+input {
+  flex: 1;
+  padding: 6px;
+  border: 2px solid #2B1100;
+  font-family: inherit;
+}
+button {
+  background: #FF5E00;
+  color: white;
+  border: 2px solid #2B1100;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 2px 2px 0 #2B1100;
+}
+button:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #2B1100;
+}
+li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+.done {
+  text-decoration: line-through;
+  color: #888;
+}
+.priority {
+  border-left: 3px solid #FF5E00;
+  padding-left: 8px;
+}
+.priority-badge {
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  margin-left: 8px;
+}
+.priority-checkbox {
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}`
+        }
+    };
+
+
+    // =========== CURRENT WORKSPACE STATE ===========
+    let currentStep = 1; 
+    let activeTab = 'app'; // app, list, style, preview
+    let todoItems = [
+        { id: 1, text: "Build next-gen AI buddy 🍊", done: false, priority: true },
+        { id: 2, text: "Sip some beachside coconut juice 🥥", done: true, priority: false }
+    ];
+    let sandboxDarkMode = false;
+
+    // =========== INITIALIZE WORKSPACE & CHAT SIMULATOR ===========
+    window.onload = function() {
+        lucide.createIcons();
+        resetDemoWorkspace();
+    };
+
+    function resetDemoWorkspace() {
+        currentStep = 1;
+        activeTab = 'app';
+        todoItems = [
+            { id: 1, text: "Build next-gen AI buddy 🍊", done: false, priority: true },
+            { id: 2, text: "Sip some beachside coconut juice 🥥", done: true, priority: false }
+        ];
+        sandboxDarkMode = false;
+        
+        const chat = document.getElementById('app-chat');
+        chat.innerHTML = '';
+        
+        appendChatMessage('ai', '🍊 Hello there! I am juice, your coding buddy. Tell me what we are shipping today! I can help you scaffold apps, edit code, and write tests.');
+        
+        renderCodeInWorkspace();
+        renderTabSelector();
+    }
+
+    function appendChatMessage(type, text) {
+        const chat = document.getElementById('app-chat');
+        const el = document.createElement('div');
+        
+        if (type === 'user') {
+            el.className = 'chat-msg chat-user';
+            el.innerHTML = `<strong>You:</strong> ${text}`;
+        } else if (type === 'ai') {
+            el.className = 'chat-msg chat-ai';
+            el.innerHTML = `<strong>juice:</strong> ${text}`;
+        } else if (type === 'action') {
+            el.className = 'chat-action font-pixel text-orange-200/50';
+            el.innerHTML = `${text}`;
+        } else if (type === 'success') {
+            el.className = 'chat-success font-pixel';
+            el.innerHTML = `${text}`;
+        }
+        
+        chat.appendChild(el);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Trigger predetermined workspace steps
+    function triggerDemoStep(stepNum) {
+        currentStep = stepNum;
+        if (stepNum === 1) {
+            appendChatMessage('user', 'build me a todo app with react');
+            setTimeout(() => {
+                appendChatMessage('ai', '🍊 Safe waters ahead! Creating the initial react setup & todo list configuration...');
+                setTimeout(() => {
+                    appendChatMessage('action', '📁 Creating directories: todo-app/src/components');
+                    appendChatMessage('action', '📝 Writing App.jsx...');
+                    appendChatMessage('action', '📝 Writing components/TodoList.jsx...');
+                    appendChatMessage('action', '📝 Writing styles.css...');
+                    appendChatMessage('action', '💻 Running build sequence...');
+                    setTimeout(() => {
+                        appendChatMessage('success', '✅ React scaffold completed successfully! Click on the Preview tab to test it out.');
+                        switchEditorTab('app');
+                    }, 800);
+                }, 600);
+            }, 300);
+        } else if (stepNum === 2) {
+            appendChatMessage('user', '@App.jsx add a dark mode toggle button with full Tailwind / CSS styles');
+            setTimeout(() => {
+                appendChatMessage('ai', '🍊 Reading App.jsx... Modifying layout to support customizable dark theme options.');
+                setTimeout(() => {
+                    appendChatMessage('action', '📝 Re-writing App.jsx with darkMode toggle states');
+                    appendChatMessage('action', '📝 Injecting custom root selector classes inside styles.css');
+                    setTimeout(() => {
+                        appendChatMessage('success', '✅ Applied dark mode hook! You can now toggle the dark theme inside the Preview tab!');
+                        switchEditorTab('preview');
+                    }, 800);
+                }, 600);
+            }, 300);
+        } else if (stepNum === 3) {
+            appendChatMessage('user', 'Can you add a priority flag to tasks in @TodoList.jsx so high priority tasks get a special red border?');
+            setTimeout(() => {
+                appendChatMessage('ai', '🍊 Let\'s add that extra spice! I\'ll edit the form state and apply a "High Priority" badge option to our tasks.');
+                setTimeout(() => {
+                    appendChatMessage('action', '📝 Refactoring components/TodoList.jsx state structure');
+                    appendChatMessage('action', '📝 Styling priority borders inside styles.css');
+                    setTimeout(() => {
+                        appendChatMessage('success', '✅ Complete! High priority tasks will now render with hot fire indicators in your live build.');
+                        switchEditorTab('preview');
+                    }, 800);
+                }, 600);
+            }, 300);
+        }
+        
+        renderCodeInWorkspace();
+    }
+
+    // Switch between the workspace tabs
+    function switchEditorTab(tab) {
+        activeTab = tab;
+        renderTabSelector();
+        renderCodeInWorkspace();
+    }
+
+    function renderTabSelector() {
+        const tabs = ['app', 'list', 'style', 'preview'];
+        tabs.forEach(t => {
+            const el = document.getElementById(`tab-${t}`);
+            if (el) {
+                if (t === activeTab) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    function renderCodeInWorkspace() {
+        const body = document.getElementById('editor-body');
+        if (!body) return;
+
+        if (activeTab === 'preview') {
+            body.innerHTML = getSandboxPreviewHTML();
+            return;
+        }
+
+        let code = '';
+        const stepKey = `step${currentStep}`;
+        
+        if (activeTab === 'app') {
+            code = workspaceFiles.app[stepKey] || workspaceFiles.app.step1;
+        } else if (activeTab === 'list') {
+            code = workspaceFiles.list[stepKey] || workspaceFiles.list.step1;
+        } else if (activeTab === 'style') {
+            code = workspaceFiles.style[stepKey] || workspaceFiles.style.step1;
+        }
+
+        const safeLines = code
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .split('\n');
+
+        let output = '<table class="w-full">';
+        safeLines.forEach((line, index) => {
+            output += `
+                <tr>
+                    <td class="w-8 text-right select-none pr-4 editor-line-number">${index + 1}</td>
+                    <td style="color: #f4ebd8;">${highlightLine(line)}</td>
+                </tr>`;
+        });
+        output += '</table>';
+        body.innerHTML = output;
+    }
+
+    function highlightLine(line) {
+        return line
+            .replace(/(const|let|var|import|export|default|function|return|from|false|true)/g, '<span style="color: #FFEA00;">$1</span>')
+            .replace(/(&lt;[a-zA-Z0-9]+|&lt;\/[a-zA-Z0-9]+|className=)/g, '<span style="color: #FF5E00;">$1</span>')
+            .replace(/('.*?'|".*?")/g, '<span style="color: #00FFFF;">$1</span>')
+            .replace(/(\/\/.*)/g, '<span style="color: #00FF66; opacity: 0.85;">$1</span>');
+    }
+
+    // Live rendered Preview Sandbox app
+    function getSandboxPreviewHTML() {
+        const bgStyle = sandboxDarkMode ? 'background: #2B1100; color: #FFF5E0;' : 'background: white; color: #2B1100;';
+        const borderStyle = sandboxDarkMode ? 'border-color: #FFEA00; box-shadow: 4px 4px 0 #FFEA00;' : 'border-color: #2B1100; box-shadow: 4px 4px 0 #2B1100;';
+        
+        let headerRow = `
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid ${sandboxDarkMode ? '#FFEA00' : '#2B1100'}; padding-bottom:10px; margin-bottom:15px;">
+                <h3 style="font-family:'Amatic SC', cursive; font-size:2.5rem; font-weight:bold; margin:0;">🍊 juice todo</h3>
+                ${currentStep >= 2 ? `
+                    <button onclick="toggleSandboxTheme()" style="background:${sandboxDarkMode ? '#FFEA00' : '#FF5E00'}; color:${sandboxDarkMode ? '#2B1100' : 'white'}; border: 2px solid ${sandboxDarkMode ? '#FFEA00' : '#2B1100'}; padding: 4px 10px; cursor: pointer; font-family:'VT323', monospace;">
+                        ${sandboxDarkMode ? '☀️ Light' : '🌙 Dark'}
+                    </button>
+                ` : ''}
+            </div>
+        `;
+
+        let inputRow = `
+            <div style="display:flex; gap:8px; margin-bottom:15px; align-items:center;">
+                <input id="sb-input" placeholder="New task..." style="flex:1; padding:6px; background:${sandboxDarkMode ? '#110400' : 'white'}; color:${sandboxDarkMode ? 'white' : 'black'}; border:2px solid ${sandboxDarkMode ? '#FFEA00' : '#2B1100'}; font-family:inherit;" />
+                ${currentStep >= 3 ? `
+                    <label style="display:flex; align-items:center; gap:4px; font-size:0.9rem; cursor:pointer; color:${sandboxDarkMode ? '#FFEA00' : '#FF5E00'};">
+                        <input type="checkbox" id="sb-priority" style="cursor:pointer;" /> 🔥 High
+                    </label>
+                ` : ''}
+                <button onclick="addSandboxTodo()" style="background:${sandboxDarkMode ? '#FFEA00' : '#FF5E00'}; color:${sandboxDarkMode ? '#2B1100' : 'white'}; border:2px solid ${sandboxDarkMode ? '#FFEA00' : '#2B1100'}; padding:6px 14px; cursor:pointer; font-family:inherit;">Add</button>
+            </div>
+        `;
+
+        let todoListItems = '';
+        todoItems.forEach(todo => {
+            const liStyle = `
+                display:flex; 
+                justify-content:space-between; 
+                align-items:center; 
+                padding:8px 6px; 
+                border-bottom: 1px dashed ${sandboxDarkMode ? '#331400' : '#ddd'};
+                ${currentStep >= 3 && todo.priority ? `border-left: 3px solid ${sandboxDarkMode ? '#FFEA00' : '#FF5E00'}; padding-left: 8px;` : ''}
+            `;
+
+            todoListItems += `
+                <li style="${liStyle}">
+                    <span onclick="toggleSandboxTodo(${todo.id})" style="cursor:pointer; flex: 1; ${todo.done ? 'text-decoration: line-through; opacity: 0.5;' : ''}">
+                        ${todo.text}
+                    </span>
+                    ${currentStep >= 3 && todo.priority ? `
+                        <span style="font-size:0.8rem; background:#FF5E00; color:white; padding: 2px 6px; border-radius:1px; margin-left: 8px; font-weight: bold;">🔥 HIGH</span>
+                    ` : ''}
+                    <button onclick="deleteSandboxTodo(${todo.id})" style="background:transparent; border:none; color:red; cursor:pointer; font-size:1.1rem; padding: 0 6px;">✕</button>
+                </li>
+            `;
+        });
+
+        return `
+            <div class="preview-pane" style="min-height:300px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <div style="width:100%; max-width:400px; padding:20px; border:3px solid #2B1100; transition:all 0.2s; ${bgStyle} ${borderStyle}">
+                    ${headerRow}
+                    ${inputRow}
+                    <ul style="list-style:none; padding:0; margin:0;">
+                        ${todoListItems}
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+
+    // Preview actions
+    function toggleSandboxTheme() {
+        sandboxDarkMode = !sandboxDarkMode;
+        renderCodeInWorkspace();
+    }
+
+    function addSandboxTodo() {
+        const input = document.getElementById('sb-input');
+        if (!input || !input.value.trim()) return;
+
+        const text = input.value;
+        const priorityCheckbox = document.getElementById('sb-priority');
+        const priority = priorityCheckbox ? priorityCheckbox.checked : false;
+
+        todoItems.push({
+            id: Date.now(),
+            text: text,
+            done: false,
+            priority: priority
+        });
+
+        renderCodeInWorkspace();
+    }
+
+    function toggleSandboxTodo(id) {
+        todoItems = todoItems.map(t => t.id === id ? { ...t, done: !t.done } : t);
+        renderCodeInWorkspace();
+    }
+
+    function deleteSandboxTodo(id) {
+        todoItems = todoItems.filter(t => t.id !== id);
+        renderCodeInWorkspace();
+    }
+
+    // =========== CUSTOM INPUT / CHAT BOT RESPONSES ===========
+    function handleInputKeyPress(e) {
+        const val = e.target.value;
+        const pop = document.getElementById('autocomplete');
+
+        if (val.endsWith('@')) {
+            pop.classList.add('show');
+        } else if (!val.includes('@')) {
+            pop.classList.remove('show');
+        }
+
+        if (e.key === 'Enter') {
+            handleSendBtn();
+        }
+    }
+
+    function insertAutocomplete(text) {
+        const input = document.getElementById('demo-input');
+        const current = input.value;
+        input.value = current.substring(0, current.lastIndexOf('@')) + text + ' ';
+        document.getElementById('autocomplete').classList.remove('show');
+        input.focus();
+    }
+
+    function handleSendBtn() {
+        const input = document.getElementById('demo-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        appendChatMessage('user', text);
+        input.value = '';
+        document.getElementById('autocomplete').classList.remove('show');
+
+        setTimeout(() => {
+            appendChatMessage('ai', '🍊 Understood! I am analyzing your workspace configurations now...');
+            setTimeout(() => {
+                appendChatMessage('action', '🔍 Resolving target AST references...');
+                appendChatMessage('action', '📝 Applying code block edits with workspace modules...');
+                setTimeout(() => {
+                    todoItems.push({
+                        id: Date.now(),
+                        text: text.replace(/@\w+\.\w+/g, '').trim() || "Juice customized feature implementation!",
+                        done: false,
+                        priority: text.includes('priority') || text.includes('high')
+                    });
+                    
+                    appendChatMessage('success', '✅ Changes parsed and successfully implemented! Go to the Preview tab to see your changes running live.');
+                    switchEditorTab('preview');
+                }, 850);
+            }, 600);
+        }, 350);
+    }
+</script>
+</body>
+</html>
